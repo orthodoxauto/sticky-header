@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "noImplicitAny": true,
+        "declaration": true,
+        "emitDeclarationOnly": false,
+        "module": "es6",
+        "target": "es5",
+        "jsx": "react",
+        "strict": true,
+        "allowJs": true,
+        "moduleResolution": "node"
+    },
+    "include": ["src/**/*"],
+    "exclude": ["node_modules"]
+}

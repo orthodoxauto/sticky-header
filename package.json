@@ -1,0 +1,31 @@
+{
+    "name": "@orthodoxauto/sticky-header",
+    "version": "0.0.0",
+    "description": "Make your table's header sticky",
+    "type": "module",
+    "main": "./dist/index.js",
+    "scripts": {
+        "dev": "webpack --mode=development --config webpack.config.js",
+        "build": "webpack --mode=production --config webpack.config.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+ssh://git@github.com/orthodoxauto/sticky-header.git"
+    },
+    "files": [
+        "dist",
+        "src"
+    ],
+    "author": "Sanjay Banjade",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/orthodoxauto/sticky-header/issues"
+    },
+    "homepage": "https://github.com/orthodoxauto/sticky-header#readme",
+    "devDependencies": {
+        "ts-loader": "^9.5.1",
+        "typescript": "^5.4.2",
+        "webpack": "^5.90.3",
+        "webpack-cli": "^5.1.4"
+    }
+}
