@@ -36,32 +36,50 @@ instance.update()
 
 You can initialize the plugin with an options map to tweak the behavior. The following options are supported:
 
-### `containerSelector`
-
-CSS selector for scrollable container of a table. Default is `[data-scroll-container]`.
-
-```
-createStickyHeader(table, {
-    containerSelector: '[data-scroll-container]'
-})
-```
-
-### `headerSelector`
+### `header`
 
 CSS selector for table's header. Default is `thead`.
 
 ```
 createStickyHeader(table, {
-    headerSelector: 'thead'
+    header: 'thead'
 })
 ```
 
-### `headerCellSelector`
+### `headerCell`
 
 CSS selector for table's header cell. Default is `th`.
 
 ```
 createStickyHeader(table, {
-    headerCellSelector: 'th'
+    headerCell: 'th'
+})
+```
+
+### `fixedOffset`
+
+Specifies how much the sticky header should be offset from the top of the page.
+
+```
+createStickyHeader(table, {
+    fixedOffset: ['#nav']
+})
+```
+
+### `scrollableArea`
+
+Allows you to overwrite which surrounding element is scrolling. Defaults to `window`.
+
+```
+createStickyHeader(table, {
+    scrollableArea: '#scrollable'
+})
+```
+
+### `zIndex`
+
+```
+createStickyHeader(table, {
+    scrollableArea: '#scrollable'
 })
 ```
