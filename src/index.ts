@@ -4,6 +4,7 @@ export type StickyHeaderOptions = {
     fixedOffset?: string[]
     scrollableArea?: string
     zIndex?: number
+    hiddenCell?: string
 }
 
 type ElementRect = {
@@ -19,6 +20,7 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
     const $fixedOffset = options?.fixedOffset ?? []
     const $scrollableArea = options?.scrollableArea
     const $zIndex = options?.zIndex ?? 10
+    const $hiddenCell = options?.hiddenCell
 
     const table =
         $table instanceof HTMLElement ? $table : document.querySelector<HTMLElement>($table)
@@ -125,7 +127,7 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
         const [$scrollX, $scrollY] = getScrollOffset()
 
         if (
-            $scrollY + offsetY >= originalHeaderRect.y &&
+            $scrollY + offsetY > originalHeaderRect.y &&
             $scrollY + offsetY < tableRect.y + tableRect.height - lastCellRect.height
         ) {
             if (!isSticky) {
@@ -133,10 +135,12 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
                 update()
             }
 
-            stickyHeader!.style.removeProperty('display')
+            stickyHeader.style.removeProperty('display')
+            originalHeader.style.opacity = '0'
             scrollStickyHeader()
         } else {
             stickyHeader.style.setProperty('display', 'none', 'important')
+            originalHeader.style.removeProperty('opacity')
             isSticky = false
         }
     }, 0)
@@ -174,6 +178,10 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
             stickyHeaderCells[i].style.minWidth = width + 'px'
             stickyHeaderCells[i].style.maxHeight = height + 'px'
             stickyHeaderCells[i].style.minHeight = height + 'px'
+
+            if ($hiddenCell && stickyHeaderCells[i].matches($hiddenCell)) {
+                stickyHeaderCells[i].style.opacity = '0'
+            }
         }
 
         toggle()

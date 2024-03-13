@@ -38,7 +38,7 @@ You can initialize the plugin with an options map to tweak the behavior. The fol
 
 ### `header`
 
-CSS selector for table's header. Default is `thead`.
+CSS selector for table's header. Defaults to `thead`.
 
 ```
 createStickyHeader(table, {
@@ -48,7 +48,7 @@ createStickyHeader(table, {
 
 ### `headerCell`
 
-CSS selector for table's header cell. Default is `th`.
+CSS selector for table's header cell. Defaults to `th`.
 
 ```
 createStickyHeader(table, {
@@ -78,8 +78,20 @@ createStickyHeader(table, {
 
 ### `zIndex`
 
+Z-index for table's header. Defaults to `10`.
+
 ```
 createStickyHeader(table, {
-    scrollableArea: '#scrollable'
+    zIndex: 12
+})
+```
+
+### `hiddenCell`
+
+Indicates which header cells should be hidden.
+
+```
+createStickyHeader(table, {
+    hiddenCell: '[data-sticky-hidden-cell]'
 })
 ```
