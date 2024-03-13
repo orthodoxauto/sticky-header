@@ -1,6 +1,6 @@
 {
     "name": "@orthodoxauto/sticky-header",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Make your table's header sticky",
     "type": "module",
     "main": "./dist/index.js",
