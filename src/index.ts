@@ -5,6 +5,8 @@ export type StickyHeaderOptions = {
     scrollableArea?: string
     zIndex?: number
     hiddenCell?: string
+    onShow?: () => void
+    onHide?: () => void
 }
 
 type ElementRect = {
@@ -21,6 +23,8 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
     const $scrollableArea = options?.scrollableArea
     const $zIndex = options?.zIndex ?? 10
     const $hiddenCell = options?.hiddenCell
+    const $onShow = options?.onShow
+    const $onHide = options?.onHide
 
     const table =
         $table instanceof HTMLElement ? $table : document.querySelector<HTMLElement>($table)
@@ -133,15 +137,20 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
             if (!isSticky) {
                 isSticky = true
                 update()
+                if ($onShow) $onShow()
             }
 
             stickyHeader.style.removeProperty('display')
             originalHeader.style.opacity = '0'
             scrollStickyHeader()
         } else {
+            if (isSticky) {
+                isSticky = false
+                if ($onHide) $onHide()
+            }
+
             stickyHeader.style.setProperty('display', 'none', 'important')
             originalHeader.style.removeProperty('opacity')
-            isSticky = false
         }
     }, 0)
 
