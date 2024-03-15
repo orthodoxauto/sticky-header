@@ -86,14 +86,14 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
     }
 
     const bind = () => {
-        scrollableArea.addEventListener('scroll', toggle)
+        scrollableArea.addEventListener('scroll', onToggle)
         window.addEventListener('load', update)
         window.addEventListener('resize', onResize)
         table.addEventListener('scroll', scrollHeader)
     }
 
     const unbind = () => {
-        scrollableArea.removeEventListener('scroll', toggle)
+        scrollableArea.removeEventListener('scroll', onToggle)
         window.removeEventListener('load', update)
         window.removeEventListener('resize', onResize)
         table.removeEventListener('scroll', scrollHeader)
@@ -139,33 +139,33 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
         }
     }
 
-    const toggle = () => {
+    const toggle = (forceUpdate: boolean = false) => {
         const [$scrollX, $scrollY] = getScrollOffset()
 
         if (
             $scrollY + offsetY > headerRect.y &&
             $scrollY + offsetY < tableRect.y + tableRect.height - lastCellRect.height
         ) {
-            if (!isSticky) {
+            if (!isSticky || forceUpdate) {
                 rect()
                 isSticky = true
                 apply()
-                if ($onShow) $onShow()
+                if (!forceUpdate && $onShow) $onShow()
             }
 
             scrollHeader()
         } else {
-            if (isSticky) {
+            if (isSticky || forceUpdate) {
                 isSticky = false
                 clear()
-                if ($onHide) $onHide()
+                if (!forceUpdate && $onHide) $onHide()
             }
         }
     }
 
     const update = debounce(() => {
         rect()
-        toggle()
+        toggle(true)
     }, 0)
 
     const rect = () => {
@@ -240,6 +240,8 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
 
         originalHeader.scrollTo(table.scrollLeft, 0)
     }
+
+    const onToggle = () => toggle(false)
 
     const onResize = debounce(update, 250)
 

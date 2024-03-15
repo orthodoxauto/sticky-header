@@ -86,16 +86,6 @@ createStickyHeader(table, {
 })
 ```
 
-### `hiddenCell`
-
-Indicates which header cells should be hidden.
-
-```
-createStickyHeader(table, {
-    hiddenCell: '[data-sticky-hidden-cell]'
-})
-```
-
 ### `onShow`
 
 Invokes when sticky header is visible.
