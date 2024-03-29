@@ -85,27 +85,3 @@ createStickyHeader(table, {
     zIndex: 12
 })
 ```
-
-### `onShow`
-
-Invokes when sticky header is visible.
-
-```
-createStickyHeader(table, {
-    onShow: () => {
-        console.log('Sticky header is now visible')
-    }
-})
-```
-
-### `onHide`
-
-Invokes when sticky header is hidden.
-
-```
-createStickyHeader(table, {
-    onHide: () => {
-        console.log('Sticky header is now hidden')
-    }
-})
-```

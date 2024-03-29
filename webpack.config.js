@@ -29,8 +29,5 @@ export default (env, argv) => {
         experiments: {
             outputModule: true
         },
-        optimization: {
-            minimize: false
-        }
     }
 }
