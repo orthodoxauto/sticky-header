@@ -39,7 +39,6 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
     let y = 0
     let offsetY = 0
     let sticky = false
-    let initialized = false
 
     function debounce<T extends (...args: any[]) => any>(
         func: T,
@@ -143,7 +142,7 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
     }
 
     const getHeader = () => {
-        if (!initialized) {
+        if (!sticky) {
             return getOriginalHeader(false)
         }
 
@@ -151,7 +150,7 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
     }
 
     const getHeaderCells = () => {
-        if (!initialized) {
+        if (!sticky) {
             return getOriginalHeaderCells(false)
         }
 
@@ -176,6 +175,7 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
 
             if (sticky) {
                 sticky = false
+                apply()
             }
         }
 
@@ -189,9 +189,6 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
             rect()
             toggle()
             apply()
-            scrollHeader()
-
-            initialized = true
         },
         0,
         false
@@ -205,7 +202,6 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
 
         if (clonedHeader) {
             clonedHeader.id = $clonedHeader.replace('#', '')
-            clonedHeader.style.visibility = 'hidden'
             clear(clonedHeader, clonedHeader.querySelectorAll($headerCell))
             originalHeader?.insertAdjacentElement('afterend', clonedHeader)
         }
@@ -229,10 +225,19 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
     const apply = () => {
         const originalHeader = getOriginalHeader(false)
         const originalHeaderCells = getOriginalHeaderCells(false)
+        const clonedHeader = getClonedHeader(false)
 
-        if (!(originalHeader && originalHeaderCells)) {
+        if (!(originalHeader && originalHeaderCells && clonedHeader)) {
             return
         }
+
+        if (!sticky) {
+            clear()
+            clonedHeader.style.setProperty('display', 'none', 'important')
+            return
+        }
+
+        clonedHeader.style.removeProperty('display')
 
         for (let i = 0; i < headerCellsRect.length; i++) {
             const { width, height } = headerCellsRect[i]
@@ -257,10 +262,11 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
     const applyTransformation = () => {
         const originalHeader = getOriginalHeader(true)
 
-        if (!originalHeader) {
+        if (!originalHeader || !sticky) {
             return
         }
 
+        scrollHeader()
         originalHeader.style.transform = `translate3d(${tableRect.x}px, ${y}px, 0px)`
     }
 
