@@ -1,11 +1,9 @@
-export type StickyHeaderOptions = {
+export type clonedHeaderOptions = {
     header?: string
     headerCell?: string
     fixedOffset?: string[]
     scrollableArea?: string
     zIndex?: number
-    onShow?: () => void
-    onHide?: () => void
 }
 
 type ElementRect = {
@@ -15,14 +13,12 @@ type ElementRect = {
     y: number
 }
 
-function createStickyHeader($table: string | HTMLElement, options?: StickyHeaderOptions) {
+function createStickyHeader($table: string | HTMLElement, options?: clonedHeaderOptions) {
     const $header = options?.header ?? 'thead'
     const $headerCell = options?.headerCell ?? 'th'
     const $fixedOffset = options?.fixedOffset ?? []
     const $scrollableArea = options?.scrollableArea
     const $zIndex = options?.zIndex ?? 10
-    const $onShow = options?.onShow
-    const $onHide = options?.onHide
 
     const table =
         $table instanceof HTMLElement ? $table : document.querySelector<HTMLElement>($table)
@@ -37,19 +33,20 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
     const scrollableArea = $scrollableArea
         ? document.querySelector($scrollableArea) ?? window
         : window
-    let stickyHeader: HTMLElement | null = null
-    let stickyHeaderCells: NodeListOf<HTMLElement> | null = null
-    let lastCell: HTMLElement | null = null
+    let clonedHeader: HTMLElement | null = null
+    let clonedHeaderCells: NodeListOf<HTMLElement> | null = null
     let tableRect = getRect(null)
     let headerRect = getRect(null)
     let headerCellsRect: ElementRect[] = []
-    let lastCellRect = getRect(null)
+    let y = 0
     let offsetY = 0
-    let isSticky = false
+    let sticky = false
+    let initialized = false
 
     function debounce<T extends (...args: any[]) => any>(
         func: T,
-        wait: number
+        wait: number,
+        clear: boolean = true
     ): (...args: Parameters<T>) => void {
         let timeout: ReturnType<typeof setTimeout> | null = null
 
@@ -57,7 +54,7 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
             // @ts-ignore
             const context = this
 
-            if (timeout !== null) {
+            if (timeout !== null && clear) {
                 clearTimeout(timeout)
             }
 
@@ -70,49 +67,31 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
             return
         }
 
-        stickyHeader = originalHeader.cloneNode(true) as HTMLElement
-        stickyHeaderCells = stickyHeader.querySelectorAll($headerCell)
-        stickyHeader.style.setProperty('display', 'none', 'important')
+        clonedHeader = originalHeader.cloneNode(true) as HTMLElement
+        clonedHeaderCells = clonedHeader.querySelectorAll($headerCell)
+        clonedHeader.style.visibility = 'hidden'
 
-        originalHeader.insertAdjacentElement('afterend', stickyHeader)
-
-        lastCell =
-            table.querySelector('tfoot') ??
-            table.querySelector('tbody tr:last-child') ??
-            table.querySelector('.d-table-row:last-child')
-
-        update()
         bind()
+        update(() => {
+            if (!clonedHeader) {
+                return
+            }
+
+            initialized = true
+            originalHeader.insertAdjacentElement('afterend', clonedHeader)
+        })
     }
 
     const bind = () => {
-        scrollableArea.addEventListener('scroll', onToggle)
-        window.addEventListener('load', update)
+        scrollableArea.addEventListener('scroll', toggle)
         window.addEventListener('resize', onResize)
         table.addEventListener('scroll', scrollHeader)
     }
 
     const unbind = () => {
-        scrollableArea.removeEventListener('scroll', onToggle)
-        window.removeEventListener('load', update)
+        scrollableArea.removeEventListener('scroll', toggle)
         window.removeEventListener('resize', onResize)
         table.removeEventListener('scroll', scrollHeader)
-    }
-
-    const getHeader = () => {
-        if (isSticky) {
-            return stickyHeader
-        }
-
-        return originalHeader
-    }
-
-    const getHeaderCells = () => {
-        if (isSticky) {
-            return stickyHeaderCells
-        }
-
-        return originalHeaderCells
     }
 
     const getScrollOffset = () => {
@@ -123,50 +102,78 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
         return [scrollableArea.scrollX, scrollableArea.scrollY]
     }
 
-    function getRect(element: Element | null): ElementRect {
+    function getRect(element: Element | null): DOMRect {
         if (!element) {
-            return { x: 0, y: 0, width: 0, height: 0 }
+            return DOMRect.fromRect({ x: 0, y: 0, width: 0, height: 0 })
         }
 
         const { left, top, width, height } = element.getBoundingClientRect()
         const [$scrollX, $scrollY] = getScrollOffset()
 
-        return {
+        return DOMRect.fromRect({
             x: left + $scrollX - document.documentElement.clientLeft,
             y: top + $scrollY - document.documentElement.clientTop,
             height,
             width
-        }
+        })
     }
 
-    const toggle = (forceUpdate: boolean = false) => {
+    const getHeader = () => {
+        if (!initialized) {
+            return originalHeader
+        }
+
+        return clonedHeader
+    }
+
+    const getHeaderCells = () => {
+        if (!initialized) {
+            return originalHeaderCells
+        }
+
+        return clonedHeaderCells
+    }
+
+    const toggle = () => {
+        if (!originalHeader) {
+            return
+        }
+
         const [$scrollX, $scrollY] = getScrollOffset()
 
-        if (
-            $scrollY + offsetY > headerRect.y &&
-            $scrollY + offsetY < tableRect.y + tableRect.height - lastCellRect.height
-        ) {
-            if (!isSticky || forceUpdate) {
-                rect()
-                isSticky = true
-                apply()
-                if (!forceUpdate && $onShow) $onShow()
-            }
+        if ($scrollY > tableRect.bottom - offsetY - headerRect.height) {
+            y = tableRect.bottom - headerRect.height - $scrollY
+        } else if (tableRect.top - $scrollY < offsetY) {
+            y = offsetY
 
-            scrollHeader()
+            if (!sticky) {
+                rect()
+                sticky = true
+                apply()
+            }
         } else {
-            if (isSticky || forceUpdate) {
-                isSticky = false
-                clear()
-                if (!forceUpdate && $onHide) $onHide()
+            y = tableRect.top - $scrollY
+
+            if (sticky) {
+                sticky = false
             }
         }
+
+        applyTransformation()
     }
 
-    const update = debounce(() => {
-        rect()
-        toggle(true)
-    }, 0)
+    const update = debounce(
+        (callback?: Event | Function) => {
+            rect()
+            apply()
+            toggle()
+            scrollHeader()
+
+            if (callback instanceof Function) callback()
+        },
+        0,
+        false
+    )
 
     const rect = () => {
         offsetY = 0
@@ -180,16 +187,13 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
 
         tableRect = getRect(table)
         headerRect = getRect(getHeader())
-        lastCellRect = getRect(lastCell)
         headerCellsRect = Array.from(getHeaderCells() ?? [], (cell) => getRect(cell))
     }
 
     const apply = () => {
-        if (!(originalHeader && originalHeaderCells && stickyHeader)) {
+        if (!(originalHeader && originalHeaderCells)) {
             return
         }
-
-        stickyHeader.style.removeProperty('display')
 
         for (let i = 0; i < headerCellsRect.length; i++) {
             const { width, height } = headerCellsRect[i]
@@ -203,14 +207,24 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
         originalHeader.style.position = 'fixed'
         originalHeader.style.width = tableRect.width + 'px'
         originalHeader.style.height = headerRect.height + 'px'
-        originalHeader.style.top = offsetY + 'px'
-        originalHeader.style.left = tableRect.x + 'px'
+        originalHeader.style.top = '0px'
+        originalHeader.style.left = '0px'
         originalHeader.style.zIndex = `${$zIndex}`
         originalHeader.style.overflow = 'hidden'
+
+        applyTransformation()
+    }
+
+    const applyTransformation = () => {
+        if (!originalHeader) {
+            return
+        }
+
+        originalHeader.style.transform = `translate3d(${tableRect.x}px, ${y}px, 0px)`
     }
 
     const clear = () => {
-        if (!(originalHeader && originalHeaderCells && stickyHeader)) {
+        if (!(originalHeader && originalHeaderCells && clonedHeader)) {
             return
         }
 
@@ -221,15 +235,13 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
         originalHeader.style.removeProperty('left')
         originalHeader.style.removeProperty('z-index')
         originalHeader.style.removeProperty('overflow')
-
-        stickyHeader.style.setProperty('display', 'none', 'important')
+        originalHeader.style.removeProperty('transform')
 
         for (let i = 0; i < originalHeaderCells.length; i++) {
             originalHeaderCells[i].style.removeProperty('max-width')
             originalHeaderCells[i].style.removeProperty('min-width')
             originalHeaderCells[i].style.removeProperty('max-height')
             originalHeaderCells[i].style.removeProperty('min-height')
-            originalHeaderCells[i].style.removeProperty('opacity')
         }
     }
 
@@ -241,14 +253,12 @@ function createStickyHeader($table: string | HTMLElement, options?: StickyHeader
         originalHeader.scrollTo(table.scrollLeft, 0)
     }
 
-    const onToggle = () => toggle(false)
-
-    const onResize = debounce(update, 250)
+    const onResize = debounce(update, 250, true)
 
     const dispose = () => {
         unbind()
         clear()
-        stickyHeader?.remove()
+        clonedHeader?.remove()
     }
 
     init()
