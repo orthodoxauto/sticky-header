@@ -13,26 +13,24 @@ type ElementRect = {
     y: number
 }
 
-function createStickyHeader($table: string | HTMLElement, options?: clonedHeaderOptions) {
+let _uid = 0
+
+function createStickyHeader($table: string, options?: clonedHeaderOptions) {
+    _uid += 1
+
     const $header = options?.header ?? 'thead'
     const $headerCell = options?.headerCell ?? 'th'
+    const $clonedHeader = `#oa-header-${_uid}`
     const $fixedOffset = options?.fixedOffset ?? []
     const $scrollableArea = options?.scrollableArea
     const $zIndex = options?.zIndex ?? 10
 
-    const table =
-        $table instanceof HTMLElement ? $table : document.querySelector<HTMLElement>($table)
-    if (!table) {
-        throw new Error('specified table not found')
-    }
-
-    const originalHeader = table.querySelector<HTMLElement>($header)
-    const originalHeaderCells = originalHeader?.querySelectorAll($headerCell) as
-        | NodeListOf<HTMLElement>
-        | undefined
     const scrollableArea = $scrollableArea
         ? document.querySelector($scrollableArea) ?? window
         : window
+    let table: HTMLElement | null = null
+    let originalHeader: HTMLElement | null = null
+    let originalHeaderCells: NodeListOf<HTMLElement> | null = null
     let clonedHeader: HTMLElement | null = null
     let clonedHeaderCells: NodeListOf<HTMLElement> | null = null
     let tableRect = getRect(null)
@@ -62,36 +60,62 @@ function createStickyHeader($table: string | HTMLElement, options?: clonedHeader
         }
     }
 
+    const getTable = (cache = false): HTMLElement | null => {
+        if (cache && table) {
+            return table
+        }
+        return (table = document.querySelector($table))
+    }
+
+    const getOriginalHeader = (cache = false): HTMLElement | null => {
+        if (cache && originalHeader) {
+            return originalHeader
+        }
+        return (originalHeader = getTable(cache)?.querySelector($header) ?? null)
+    }
+
+    const getOriginalHeaderCells = (cache = false): NodeListOf<HTMLElement> | null => {
+        if (cache && originalHeaderCells) {
+            return originalHeaderCells
+        }
+        return (originalHeaderCells =
+            getOriginalHeader(cache)?.querySelectorAll($headerCell) ?? null)
+    }
+
+    const getClonedHeader = (cache = false): HTMLElement | null => {
+        if (cache && clonedHeader) {
+            return clonedHeader
+        }
+        return (clonedHeader = getTable(cache)?.querySelector($clonedHeader) ?? null)
+    }
+
+    const getClonedHeaderCells = (cache = false): NodeListOf<HTMLElement> | null => {
+        if (cache && clonedHeaderCells) {
+            return clonedHeaderCells
+        }
+        return (clonedHeaderCells = getClonedHeader(cache)?.querySelectorAll($headerCell) ?? null)
+    }
+
     const init = () => {
+        const originalHeader = getOriginalHeader(false)
         if (!originalHeader) {
             return
         }
 
-        clonedHeader = originalHeader.cloneNode(true) as HTMLElement
-        clonedHeaderCells = clonedHeader.querySelectorAll($headerCell)
-        clonedHeader.style.visibility = 'hidden'
-
         bind()
-        update(() => {
-            if (!clonedHeader) {
-                return
-            }
-
-            initialized = true
-            originalHeader.insertAdjacentElement('afterend', clonedHeader)
-        })
+        update()
     }
 
     const bind = () => {
         scrollableArea.addEventListener('scroll', toggle)
         window.addEventListener('resize', onResize)
-        table.addEventListener('scroll', scrollHeader)
+        getTable(false)?.addEventListener('scroll', scrollHeader)
     }
 
     const unbind = () => {
         scrollableArea.removeEventListener('scroll', toggle)
         window.removeEventListener('resize', onResize)
-        table.removeEventListener('scroll', scrollHeader)
+        getTable(false)?.removeEventListener('scroll', scrollHeader)
     }
 
     const getScrollOffset = () => {
@@ -120,25 +144,21 @@ function createStickyHeader($table: string | HTMLElement, options?: clonedHeader
 
     const getHeader = () => {
         if (!initialized) {
-            return originalHeader
+            return getOriginalHeader(false)
         }
 
-        return clonedHeader
+        return getClonedHeader(false)
     }
 
     const getHeaderCells = () => {
         if (!initialized) {
-            return originalHeaderCells
+            return getOriginalHeaderCells(false)
         }
 
-        return clonedHeaderCells
+        return getClonedHeaderCells(false)
     }
 
     const toggle = () => {
-        if (!originalHeader) {
-            return
-        }
-
         const [$scrollX, $scrollY] = getScrollOffset()
 
         if ($scrollY > tableRect.bottom - offsetY - headerRect.height) {
@@ -163,17 +183,33 @@ function createStickyHeader($table: string | HTMLElement, options?: clonedHeader
     }
 
     const update = debounce(
-        (callback?: Event | Function) => {
+        () => {
+            clone()
+
             rect()
-            apply()
             toggle()
+            apply()
             scrollHeader()
 
-            if (callback instanceof Function) callback()
+            initialized = true
         },
         0,
         false
     )
+
+    const clone = () => {
+        getClonedHeader(false)?.remove()
+
+        const originalHeader = getOriginalHeader(false)
+        const clonedHeader = originalHeader?.cloneNode(true) as HTMLElement | undefined
+
+        if (clonedHeader) {
+            clonedHeader.id = $clonedHeader.replace('#', '')
+            clonedHeader.style.visibility = 'hidden'
+            clear(clonedHeader, clonedHeader.querySelectorAll($headerCell))
+            originalHeader?.insertAdjacentElement('afterend', clonedHeader)
+        }
+    }
 
     const rect = () => {
         offsetY = 0
@@ -185,12 +221,15 @@ function createStickyHeader($table: string | HTMLElement, options?: clonedHeader
             }
         }
 
-        tableRect = getRect(table)
+        tableRect = getRect(getTable(false))
         headerRect = getRect(getHeader())
         headerCellsRect = Array.from(getHeaderCells() ?? [], (cell) => getRect(cell))
     }
 
     const apply = () => {
+        const originalHeader = getOriginalHeader(false)
+        const originalHeaderCells = getOriginalHeaderCells(false)
+
         if (!(originalHeader && originalHeaderCells)) {
             return
         }
@@ -216,6 +255,8 @@ function createStickyHeader($table: string | HTMLElement, options?: clonedHeader
     }
 
     const applyTransformation = () => {
+        const originalHeader = getOriginalHeader(true)
+
         if (!originalHeader) {
             return
         }
@@ -223,30 +264,36 @@ function createStickyHeader($table: string | HTMLElement, options?: clonedHeader
         originalHeader.style.transform = `translate3d(${tableRect.x}px, ${y}px, 0px)`
     }
 
-    const clear = () => {
-        if (!(originalHeader && originalHeaderCells && clonedHeader)) {
+    const clear = (header?: HTMLElement | null, headerCells?: NodeListOf<HTMLElement> | null) => {
+        header = header ?? getOriginalHeader(false)
+        headerCells = headerCells ?? getOriginalHeaderCells(false)
+
+        if (!(header && headerCells)) {
             return
         }
 
-        originalHeader.style.removeProperty('position')
-        originalHeader.style.removeProperty('width')
-        originalHeader.style.removeProperty('height')
-        originalHeader.style.removeProperty('top')
-        originalHeader.style.removeProperty('left')
-        originalHeader.style.removeProperty('z-index')
-        originalHeader.style.removeProperty('overflow')
-        originalHeader.style.removeProperty('transform')
+        header.style.removeProperty('position')
+        header.style.removeProperty('width')
+        header.style.removeProperty('height')
+        header.style.removeProperty('top')
+        header.style.removeProperty('left')
+        header.style.removeProperty('z-index')
+        header.style.removeProperty('overflow')
+        header.style.removeProperty('transform')
 
-        for (let i = 0; i < originalHeaderCells.length; i++) {
-            originalHeaderCells[i].style.removeProperty('max-width')
-            originalHeaderCells[i].style.removeProperty('min-width')
-            originalHeaderCells[i].style.removeProperty('max-height')
-            originalHeaderCells[i].style.removeProperty('min-height')
+        for (let i = 0; i < headerCells.length; i++) {
+            headerCells[i].style.removeProperty('max-width')
+            headerCells[i].style.removeProperty('min-width')
+            headerCells[i].style.removeProperty('max-height')
+            headerCells[i].style.removeProperty('min-height')
         }
     }
 
     const scrollHeader = () => {
-        if (!originalHeader) {
+        const table = getTable(true)
+        const originalHeader = getOriginalHeader(true)
+
+        if (!(table && originalHeader)) {
             return
         }
 
@@ -258,7 +305,7 @@ function createStickyHeader($table: string | HTMLElement, options?: clonedHeader
     const dispose = () => {
         unbind()
         clear()
-        clonedHeader?.remove()
+        getClonedHeader(false)?.remove()
     }
 
     init()
