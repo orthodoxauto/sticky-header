@@ -28,6 +28,6 @@ export default (env, argv) => {
         },
         experiments: {
             outputModule: true
-        },
+        }
     }
 }

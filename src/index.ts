@@ -39,6 +39,7 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
     let y = 0
     let offsetY = 0
     let sticky = false
+    let scrolling = false
 
     function debounce<T extends (...args: any[]) => any>(
         func: T,
@@ -106,13 +107,13 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
     }
 
     const bind = () => {
-        scrollableArea.addEventListener('scroll', toggle)
+        scrollableArea.addEventListener('scroll', onScroll)
         window.addEventListener('resize', onResize)
         getTable(false)?.addEventListener('scroll', scrollHeader)
     }
 
     const unbind = () => {
-        scrollableArea.removeEventListener('scroll', toggle)
+        scrollableArea.removeEventListener('scroll', onScroll)
         window.removeEventListener('resize', onResize)
         getTable(false)?.removeEventListener('scroll', scrollHeader)
     }
@@ -304,6 +305,15 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
         }
 
         originalHeader.scrollTo(table.scrollLeft, 0)
+    }
+
+    const onScroll = () => {
+        if (!scrolling) {
+            rect()
+            scrolling = true
+        }
+
+        toggle()
     }
 
     const onResize = debounce(update, 250, true)
