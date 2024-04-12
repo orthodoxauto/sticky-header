@@ -120,12 +120,11 @@ function createStickyHeader($table: string, options?: clonedHeaderOptions) {
         }
 
         resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                rect()
-                apply()
-            }
+            rect()
+            apply()
         })
         resizeObserver.observe(observable)
+        resizeObserver.observe(document.body)
     }
 
     const unbind = () => {
